@@ -10,6 +10,28 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
+  <!-- FIREBASE SDK & CONFIG -->
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    // TODO: Add SDKs for Firebase products that you want to use
+    // https://firebase.google.com/docs/web/setup#available-libraries
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyD5SLEZ3kWMpw2njIhvxe59uPWQ4LZMle8",
+      authDomain: "lantabur-5e821.firebaseapp.com",
+      projectId: "lantabur-5e821",
+      storageBucket: "lantabur-5e821.firebasestorage.app",
+      messagingSenderId: "276505139419",
+      appId: "1:276505139419:web:d9c2afac7775803c4d54fe",
+      measurementId: "G-XWH18WC95E"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+  </script>
+
   <!-- SATPAM LOKAL: JIKA BELUM LOGIN, TENDANG KE LOGIN.HTML -->
   <script>
     if (localStorage.getItem('admin_login_session') !== 'true') {
@@ -539,17 +561,17 @@
 
       document.getElementById('edit-paket-id').value = p.id;
       document.getElementById('edit-nama-paket').value = p.nama;
-      document.getElementById('edit-freetaif-paket').checked = p.isFreeTaif !== false;
+      document.getElementById('edit-freetaif-paket').checked = p.isFreeTaif;
       document.getElementById('edit-seat-paket').value = p.seatRemaining || 3;
       document.getElementById('edit-maskapai-paket').value = p.maskapai;
-      document.getElementById('edit-badge-paket').value = p.badge || '';
+      document.getElementById('edit-badge-paket').value = p.badge;
       document.getElementById('edit-tgl-paket').value = p.tgl;
       document.getElementById('edit-harga-paket').value = p.harga;
-      document.getElementById('edit-rawharga-paket').value = p.rawHarga || 29500000;
+      document.getElementById('edit-rawharga-paket').value = p.rawHarga;
       document.getElementById('edit-makkah-paket').value = p.makkah;
       document.getElementById('edit-madinah-paket').value = p.madinah;
       document.getElementById('edit-exclusions-paket').value = (p.exclusions || []).join(', ');
-
+      
       document.getElementById('modal-edit-paket').classList.remove('hidden');
       document.getElementById('modal-edit-paket').classList.add('flex');
     }
@@ -561,80 +583,62 @@
 
     function savePaketForm(e) {
       e.preventDefault();
-      if (!uploadedBase64Paket) {
-        alert('Pilih dan crop foto paket terlebih dahulu!');
-        return;
-      }
-
       const data = loadData();
-      const id = parseInt(document.getElementById('edit-paket-id').value);
-      const exclusionsArr = document.getElementById('edit-exclusions-paket').value.split(',').map(s => s.trim()).filter(Boolean);
+      const id = document.getElementById('edit-paket-id').value;
+      
+      const exclusionsRaw = document.getElementById('edit-exclusions-paket').value;
+      const exclusionsArr = exclusionsRaw ? exclusionsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
 
-      const newPaket = {
-        id: id || Date.now(),
+      const paketData = {
+        id: id ? parseInt(id) : Date.now(),
         nama: document.getElementById('edit-nama-paket').value,
-        isFreeTaif: document.getElementById('edit-freetaif-paket').checked,
-        seatRemaining: parseInt(document.getElementById('edit-seat-paket').value),
-        maskapai: document.getElementById('edit-maskapai-paket').value,
-        foto: uploadedBase64Paket,
-        badge: document.getElementById('edit-badge-paket').value,
         tgl: document.getElementById('edit-tgl-paket').value,
         harga: document.getElementById('edit-harga-paket').value,
-        rawHarga: parseInt(document.getElementById('edit-rawharga-paket').value),
+        rawHarga: parseInt(document.getElementById('edit-rawharga-paket').value) || 0,
         makkah: document.getElementById('edit-makkah-paket').value,
         madinah: document.getElementById('edit-madinah-paket').value,
-        exclusions: exclusionsArr
+        maskapai: document.getElementById('edit-maskapai-paket').value,
+        badge: document.getElementById('edit-badge-paket').value,
+        isFreeTaif: document.getElementById('edit-freetaif-paket').checked,
+        seatRemaining: parseInt(document.getElementById('edit-seat-paket').value) || 3,
+        exclusions: exclusionsArr,
+        foto: uploadedBase64Paket || "https://images.unsplash.com/photo-1565552070098-fd83a8dac718?auto=format&fit=crop&q=80"
       };
 
-      const targetIndex = data.paket.findIndex(x => x.id === id);
-      if(targetIndex >= 0) data.paket[targetIndex] = newPaket;
-      else data.paket.push(newPaket);
+      if (id) {
+        const index = data.paket.findIndex(x => x.id === parseInt(id));
+        if (index !== -1) data.paket[index] = paketData;
+      } else {
+        data.paket.push(paketData);
+      }
 
       saveData(data);
       closePaketModal();
+      alert('Paket berhasil disimpan dan diremote ke web!');
     }
 
     function deletePaket(id) {
-      if(!confirm('Hapus paket ini?')) return;
+      if (!confirm('Apakah Anda yakin ingin menghapus paket ini?')) return;
       const data = loadData();
       data.paket = data.paket.filter(x => x.id !== id);
       saveData(data);
     }
 
-    function openAddTestiModal() {
-      document.getElementById('edit-nama-testi').value = '';
-      document.getElementById('edit-asal-testi').value = 'Comal, Pemalang';
-      document.getElementById('edit-foto-testi').value = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80';
-      document.getElementById('edit-ulasan-testi').value = '';
-      document.getElementById('modal-edit-testi').classList.remove('hidden');
-      document.getElementById('modal-edit-testi').classList.add('flex');
+    // FUNGSI GALERI
+    function openAddGaleriModal() {
+      uploadedBase64Galeri = "";
+      document.getElementById('edit-file-galeri').value = "";
+      document.getElementById('preview-container').classList.add('hidden');
+      document.getElementById('edit-judul-galeri').value = "";
+      document.getElementById('edit-lokasi-galeri').value = "";
+      document.getElementById('edit-ket-galeri').value = "";
+      document.getElementById('modal-edit-galeri').classList.remove('hidden');
+      document.getElementById('modal-edit-galeri').classList.add('flex');
     }
 
-    function closeTestiModal() {
-      document.getElementById('modal-edit-testi').classList.add('hidden');
-      document.getElementById('modal-edit-testi').classList.remove('flex');
-    }
-
-    function saveTestiForm(e) {
-      e.preventDefault();
-      const data = loadData();
-      if(!data.testimoni) data.testimoni = [];
-      data.testimoni.push({
-        id: Date.now(),
-        nama: document.getElementById('edit-nama-testi').value,
-        asal: document.getElementById('edit-asal-testi').value,
-        foto: document.getElementById('edit-foto-testi').value,
-        ulasan: document.getElementById('edit-ulasan-testi').value
-      });
-      saveData(data);
-      closeTestiModal();
-    }
-
-    function deleteTesti(id) {
-      if(!confirm('Hapus testimoni ini?')) return;
-      const data = loadData();
-      data.testimoni = data.testimoni.filter(x => x.id !== id);
-      saveData(data);
+    function closeGaleriModal() {
+      document.getElementById('modal-edit-galeri').classList.add('hidden');
+      document.getElementById('modal-edit-galeri').classList.remove('flex');
     }
 
     function previewUploadGaleri(event) {
@@ -650,45 +654,66 @@
       }
     }
 
-    function openAddGaleriModal() {
-      uploadedBase64Galeri = "";
-      document.getElementById('edit-file-galeri').value = "";
-      document.getElementById('preview-container').classList.add('hidden');
-      document.getElementById('edit-judul-galeri').value = '';
-      document.getElementById('edit-lokasi-galeri').value = 'Makkah Al-Mukarramah';
-      document.getElementById('edit-ket-galeri').value = '';
-      document.getElementById('modal-edit-galeri').classList.remove('hidden');
-      document.getElementById('modal-edit-galeri').classList.add('flex');
-    }
-
-    function closeGaleriModal() {
-      document.getElementById('modal-edit-galeri').classList.add('hidden');
-      document.getElementById('modal-edit-galeri').classList.remove('flex');
-    }
-
     function saveGaleriForm(e) {
       e.preventDefault();
-      if (!uploadedBase64Galeri) {
-        alert('Pilih foto terlebih dahulu!');
-        return;
-      }
       const data = loadData();
-      if(!data.galeri) data.galeri = [];
+      if (!data.galeri) data.galeri = [];
+
       data.galeri.push({
         id: Date.now(),
         judul: document.getElementById('edit-judul-galeri').value,
         lokasi: document.getElementById('edit-lokasi-galeri').value,
-        foto: uploadedBase64Galeri,
-        ket: document.getElementById('edit-ket-galeri').value
+        ket: document.getElementById('edit-ket-galeri').value,
+        foto: uploadedBase64Galeri || "https://images.unsplash.com/photo-1591604466107-ec97de577aff?auto=format&fit=crop&q=80"
       });
+
       saveData(data);
       closeGaleriModal();
     }
 
     function deleteGaleri(id) {
-      if(!confirm('Hapus foto ini?')) return;
+      if (!confirm('Hapus foto galeri ini?')) return;
       const data = loadData();
       data.galeri = data.galeri.filter(x => x.id !== id);
+      saveData(data);
+    }
+
+    // FUNGSI TESTIMONI
+    function openAddTestiModal() {
+      document.getElementById('edit-nama-testi').value = "";
+      document.getElementById('edit-asal-testi').value = "";
+      document.getElementById('edit-foto-testi').value = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80";
+      document.getElementById('edit-ulasan-testi').value = "";
+      document.getElementById('modal-edit-testi').classList.remove('hidden');
+      document.getElementById('modal-edit-testi').classList.add('flex');
+    }
+
+    function closeTestiModal() {
+      document.getElementById('modal-edit-testi').classList.add('hidden');
+      document.getElementById('modal-edit-testi').classList.remove('flex');
+    }
+
+    function saveTestiForm(e) {
+      e.preventDefault();
+      const data = loadData();
+      if (!data.testimoni) data.testimoni = [];
+
+      data.testimoni.push({
+        id: Date.now(),
+        nama: document.getElementById('edit-nama-testi').value,
+        asal: document.getElementById('edit-asal-testi').value,
+        foto: document.getElementById('edit-foto-testi').value,
+        ulasan: document.getElementById('edit-ulasan-testi').value
+      });
+
+      saveData(data);
+      closeTestiModal();
+    }
+
+    function deleteTesti(id) {
+      if (!confirm('Hapus testimoni ini?')) return;
+      const data = loadData();
+      data.testimoni = data.testimoni.filter(x => x.id !== id);
       saveData(data);
     }
 
@@ -703,14 +728,21 @@
         gmapsLink: document.getElementById('input-gmaps-link').value
       };
       saveData(data);
-      alert('Kontak berhasil disimpan!');
+      alert('Pengaturan kontak & rating berhasil diperbarui!');
     }
 
     function resetDefaultData() {
-      if(confirm('Reset ke data awal?')) saveData(defaultData);
+      if (confirm('Reset seluruh data CMS ke pengaturan awal? Perubahan saat ini akan hilang.')) {
+        localStorage.removeItem('lantama_comal_cms');
+        renderAdmin();
+        alert('Data berhasil di-reset!');
+      }
     }
 
-    renderAdmin();
+    // Inisialisasi saat halaman dimuat
+    window.onload = function() {
+      renderAdmin();
+    };
   </script>
 </body>
 </html>
